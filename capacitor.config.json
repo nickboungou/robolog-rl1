@@ -1,0 +1,6 @@
+{
+  "appId": "com.robolog.rl1",
+  "appName": "RoboLog RL-1",
+  "webDir": "www",
+  "server": { "androidScheme": "http", "cleartext": true }
+}
