@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RoboLog RL-1 · Pupitre de commande</title>
+<style>
+:root{--bg:#e8ebed;--card:#fff;--ink:#17222d;--mute:#5d6b78;--line:#cfd6db;--acc:#0b6e79;--acc2:#e6f2f3;--warn:#f0b400;--bad:#d42a2a;--ok:#1f9d55;font-family:"Segoe UI",system-ui,-apple-system,sans-serif}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-size:15px}
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;padding:12px 18px;background:var(--ink);color:#fff}
+header h1{font-size:18px;margin:0;font-weight:650;letter-spacing:.2px;margin-right:auto}
+header h1 small{font-weight:400;opacity:.65;margin-left:8px}
+.conn{display:flex;gap:8px;align-items:center}
+.conn input{width:140px;padding:8px 10px;border-radius:8px;border:1px solid #44525f;background:#22303d;color:#fff}
+.dot{width:11px;height:11px;border-radius:50%;background:#7b8791}
+.dot.on{background:var(--ok)}.dot.demo{background:var(--warn)}
+button{font:inherit;cursor:pointer;border:1px solid var(--line);background:#fff;color:var(--ink);padding:9px 14px;border-radius:8px;min-height:40px}
+button:hover{border-color:var(--acc)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #7cc4cc;outline-offset:2px}
+button.pri{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:600}
+header button{background:#22303d;border-color:#44525f;color:#fff}
+#estop{background:var(--bad);border-color:var(--bad);color:#fff;font-weight:800;padding:10px 20px;font-size:15px}
+#estop.armed{background:#fff;color:var(--bad)}
+main{display:grid;grid-template-columns:minmax(300px,1fr) minmax(300px,1fr) minmax(300px,1fr);gap:14px;padding:14px 18px;max-width:1400px;margin:auto}
+section{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
+h2{font-size:15px;margin:0 0 12px;font-weight:650}
+.servo{display:grid;grid-template-columns:1fr auto;gap:2px 10px;margin-bottom:12px}
+.servo label{font-weight:600}.servo label span{font-weight:400;color:var(--mute);font-size:13px;margin-left:6px}
+.servo output{font-variant-numeric:tabular-nums;font-weight:600}
+.servo input{grid-column:1/-1;width:100%;accent-color:var(--acc);height:28px;margin:0}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.row>*{flex:1}
+svg{width:100%;height:auto;display:block}
+.post{cursor:pointer}.post circle{fill:#fff;stroke:var(--acc);stroke-width:2}
+.post:hover circle{fill:var(--acc2)}
+.post.pick circle{fill:var(--acc);}.post.pick text{fill:#fff}
+.post.drop circle{fill:var(--warn);stroke:#8a6700}
+.post text{font-size:13px;font-weight:700;text-anchor:middle;dominant-baseline:central;fill:var(--ink);pointer-events:none}
+.sens{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.sens div{background:#f3f5f6;border-radius:8px;padding:8px 10px}
+.sens b{display:block;font-size:17px;font-variant-numeric:tabular-nums}
+.sens span{font-size:12px;color:var(--mute)}
+.seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-bottom:14px}
+.seg button{flex:1;border:0;border-radius:0;background:#fff;min-height:44px}
+.seg button.on{background:var(--ink);color:#fff;font-weight:600}
+.field{display:grid;grid-template-columns:110px 1fr;gap:8px;align-items:center;margin-bottom:10px}
+select,input[type=number]{padding:8px;border:1px solid var(--line);border-radius:8px;font:inherit;width:100%}
+ol.steps{list-style:none;margin:14px 0 0;padding:0}
+ol.steps li{padding:8px 10px;border-left:4px solid var(--line);margin-bottom:4px;background:#f6f8f9;border-radius:0 8px 8px 0;color:var(--mute)}
+ol.steps li.now{border-color:var(--warn);background:#fff7de;color:var(--ink);font-weight:600}
+ol.steps li.done{border-color:var(--ok);color:var(--ink)}
+#msg{margin-top:12px;padding:10px;border-radius:8px;background:var(--acc2);min-height:42px}
+#msg.err{background:#fde8e8;color:#8f1d1d}
+.demo-box{margin-top:14px;padding:10px;border:1px dashed var(--line);border-radius:8px;font-size:13px;color:var(--mute)}
+.demo-box label{display:flex;gap:8px;align-items:center;margin-top:6px}
+.demo-box input[type=range]{flex:1}
+.hide{display:none}
+footer{padding:0 18px 20px;max-width:1400px;margin:auto;color:var(--mute);font-size:13px}
+@media(max-width:980px){main{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<header>
+  <h1>RoboLog RL-1<small>pupitre de commande · prototype</small></h1>
+  <div class="conn">
+    <span class="dot" id="dot"></span><span id="state">Hors ligne</span>
+    <input id="ip" value="192.168.4.1" aria-label="Adresse IP de l'ESP32" inputmode="decimal">
+    <button id="btnConn">Connecter</button>
+  </div>
+  <button id="estop" title="Arrêt logiciel : gèle le bras">ARRÊT D'URGENCE</button>
+</header>
+
+<main>
+  <section aria-labelledby="h-zone">
+    <h2 id="h-zone">Zone d'action et capteurs</h2>
+    <svg viewBox="0 0 400 215" role="img" aria-label="Vue de dessus : demi-secteur de 0 à 180 degrés avec 5 postes">
+      <path d="M30 190 A170 170 0 0 1 370 190 Z" fill="#f3f5f6" stroke="#cfd6db" stroke-width="2"/>
+      <path d="M95 190 A105 105 0 0 1 305 190" fill="none" stroke="#dde3e7" stroke-dasharray="4 5"/>
+      <g id="posts"></g>
+      <line id="arm" x1="200" y1="190" x2="200" y2="40" stroke="#17222d" stroke-width="7" stroke-linecap="round"/>
+      <circle cx="200" cy="190" r="14" fill="#17222d"/>
+      <text x="200" y="210" text-anchor="middle" font-size="12" fill="#5d6b78">base A1</text>
+    </svg>
+    <div class="row" style="margin-top:2px"><button id="home">Position d'attente</button></div>
+    <div class="sens">
+      <div><b id="sPres">–</b><span>Présence (FC-51)</span></div>
+      <div><b id="sDist">–</b><span>Distance (VL53L0X)</span></div>
+      <div><b id="sBat">–</b><span>Batterie 12 V</span></div>
+    </div>
+    <div class="demo-box" id="demoBox">
+      <b>Mode démo</b> (sans ESP32) : capteurs simulés
+      <label><input type="checkbox" id="simPres" checked> Objet présent</label>
+      <label>Distance <input type="range" id="simDist" min="60" max="250" value="140"> <output id="simDistV">140 mm</output></label>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-man">
+    <h2 id="h-man">Commande manuelle</h2>
+    <div id="sliders"></div>
+    <div class="row"><button id="gOpen">Ouvrir la pince</button><button id="gClose">Fermer la pince</button></div>
+  </section>
+
+  <section aria-labelledby="h-auto">
+    <h2 id="h-auto">Mode de fonctionnement</h2>
+    <div class="seg" role="group" aria-label="Mode">
+      <button id="mMan" class="on">Manuel</button><button id="mAuto">Automatique</button>
+    </div>
+    <div id="autoPane" class="hide">
+      <div class="field"><label for="selPick">Prise</label><select id="selPick"></select></div>
+      <div class="field"><label for="selDrop">Dépose</label><select id="selDrop"></select></div>
+      <div class="field"><label for="nCyc">Cycles</label><input type="number" id="nCyc" min="1" max="99" value="1"></div>
+      <div class="row"><button class="pri" id="go">Lancer le cycle</button><button id="halt">Arrêter</button></div>
+      <ol class="steps" id="steps"></ol>
+      <p style="font-size:13px;color:var(--mute);margin:10px 0 0">Cycle prévu : environ 12 s par colis (300 colis/h).</p>
+    </div>
+    <div id="msg" role="status">Mode manuel : déplacez les curseurs.</div>
+  </section>
+</main>
+<footer>L'arrêt d'urgence de cette interface est logiciel. Le prototype n'a pas de frein : prévoyez un coupe-circuit physique sur la batterie. Angles de pince, hauteurs et portées sont à calibrer sur le bras réel.</footer>
+
+<script>
+"use strict";
+// ---- Configuration matérielle (PCA9685 : canaux 0 à 5) ----
+const SERVOS=[
+ {id:"A1",name:"Base",hw:"MG995",ch:0,min:0,max:180,home:90},
+ {id:"A2",name:"Épaule",hw:"MG995",ch:1,min:20,max:160,home:90},
+ {id:"A3",name:"Coude",hw:"MG995",ch:2,min:20,max:160,home:90},
+ {id:"A4",name:"Poignet (flexion)",hw:"SG90",ch:3,min:0,max:180,home:90},
+ {id:"A5",name:"Poignet (rotation)",hw:"SG90",ch:4,min:0,max:180,home:90},
+ {id:"G",name:"Pince",hw:"SG90",ch:5,min:0,max:180,home:40}
+];
+const POSTES=[20,55,90,125,160];
+const GRIP_OPEN=40, GRIP_CLOSED=110;           // à calibrer
+const D_NEAR=60, D_FAR=250;                    // mm, plage utile du VL53L0X
+const $=id=>document.getElementById(id);
+const cur=SERVOS.map(s=>s.home);               // angles courants
+let ws=null,online=false,estop=false,mode="man",running=false,abort=false;
+let sensors={pres:0,d:0,bat:0}, sim={pres:true};
+
+// ---- Communication (WebSocket, port 81) ----
+function send(o){ if(online&&ws&&ws.readyState===1) ws.send(JSON.stringify(o)); }
+function connect(){
+  if(ws){ws.close();ws=null}
+  const ip=$("ip").value.trim(); try{localStorage.setItem("rl1ip",ip)}catch(e){}
+  setState("Connexion…","");
+  try{ws=new WebSocket("ws://"+ip+":81")}catch(e){return setState("Adresse invalide","")}
+  ws.onopen=()=>{online=true;setState("Connecté à l'ESP32","on");$("demoBox").classList.add("hide");$("btnConn").textContent="Déconnecter";
+    send({t:estop?"stop":"go"});
+    SERVOS.forEach((s,i)=>send({t:"servo",ch:s.ch,a:cur[i]}))};
+  ws.onmessage=e=>{try{const m=JSON.parse(e.data); if(m.t==="s")sensors={pres:m.fc51,d:m.d,bat:m.bat}; render()}catch(_){}};
+  ws.onclose=()=>{online=false;setState("Hors ligne · mode démo","demo");$("demoBox").classList.remove("hide");$("btnConn").textContent="Connecter"};
+  ws.onerror=()=>setMsg("Connexion impossible. Rejoignez le Wi-Fi « ROBOLOG-RL1 » puis réessayez.",true);
+}
+function setState(t,c){$("state").textContent=t;$("dot").className="dot "+c}
+setInterval(()=>send({t:"hb"}),500);            // battement : l'ESP32 gèle le bras s'il manque
+
+// ---- Rendu ----
+function render(){
+  if(!online){sensors={pres:sim.pres?1:0,d:sim.pres?+$("simDist").value:0,bat:11.9}}
+  $("sPres").textContent=sensors.pres?"Oui":"Non";
+  $("sDist").textContent=sensors.d?Math.round(sensors.d)+" mm":"–";
+  $("sBat").textContent=sensors.bat?sensors.bat.toFixed(1)+" V":"–";
+  $("sBat").style.color=sensors.bat&&sensors.bat<10.5?"var(--bad)":"";
+  SERVOS.forEach((s,i)=>{$("v"+i).textContent=Math.round(cur[i])+"°";$("r"+i).value=cur[i]});
+  const a=cur[0]*Math.PI/180;
+  $("arm").setAttribute("x2",200-150*Math.cos(a));$("arm").setAttribute("y2",190-150*Math.sin(a));
+}
+function build(){
+  $("sliders").innerHTML=SERVOS.map((s,i)=>`<div class="servo"><label for="r${i}">${s.id} ${s.name}<span>${s.hw}</span></label><output id="v${i}"></output><input type="range" id="r${i}" min="${s.min}" max="${s.max}" value="${s.home}"></div>`).join("");
+  SERVOS.forEach((s,i)=>$("r"+i).addEventListener("input",e=>{ if(mode!=="man"||estop)return render(); setServo(i,+e.target.value)}));
+  const R=170;
+  $("posts").innerHTML=POSTES.map((d,i)=>{const t=d*Math.PI/180,x=200-R*.78*Math.cos(t),y=190-R*.78*Math.sin(t);
+    return `<g class="post" id="p${i}" tabindex="0" role="button" aria-label="Poste ${i+1}, ${d} degrés" transform="translate(${x.toFixed(1)} ${y.toFixed(1)})"><circle r="17"/><text>P${i+1}</text></g>`}).join("");
+  POSTES.forEach((d,i)=>{const g=$("p"+i);const go=()=>{if(mode==="man"&&!estop)setServo(0,d)};g.onclick=go;g.onkeydown=e=>{if(e.key==="Enter"||e.key===" ")go()}});
+  const opts=POSTES.map((d,i)=>`<option value="${i}">Poste ${i+1} (${d}°)</option>`).join("");
+  $("selPick").innerHTML=opts;$("selDrop").innerHTML=opts;$("selDrop").value=3;
+  $("steps").innerHTML=STEPS.map(s=>`<li>${s[0]}</li>`).join("");
+  markPosts();
+}
+function markPosts(){POSTES.forEach((_,i)=>{const g=$("p"+i);g.classList.toggle("pick",mode==="auto"&&+$("selPick").value===i);g.classList.toggle("drop",mode==="auto"&&+$("selDrop").value===i)})}
+function setMsg(t,err){$("msg").textContent=t;$("msg").className=err?"err":""}
+
+// ---- Mouvements ----
+function setServo(i,a){a=Math.max(SERVOS[i].min,Math.min(SERVOS[i].max,a));cur[i]=a;send({t:"servo",ch:SERVOS[i].ch,a:Math.round(a)});render()}
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+async function moveTo(target,ms=800){           // interpolation douce à 25 Hz
+  const from=cur.slice(),n=Math.max(1,Math.round(ms/40));
+  for(let k=1;k<=n;k++){
+    if(abort||estop)throw new Error("stop");
+    const e=k/n, ease=e<.5?2*e*e:1-Math.pow(-2*e+2,2)/2;
+    for(const [i,v] of Object.entries(target)){const j=+i;setServo(j,from[j]+(v-from[j])*ease)}
+    await sleep(40);
+  }
+}
+async function wait(ms){const t=Date.now();while(Date.now()-t<ms){if(abort||estop)throw new Error("stop");await sleep(50)}}
+const lerp=(a,b,t)=>a+(b-a)*t;
+
+// ---- Cycle automatique : détecter, saisir, déplacer ----
+const STEPS=[["Détecter l'objet"],["S'orienter vers le poste"],["Approcher la pince"],["Saisir"],["Soulever"],["Transférer vers la dépose"],["Déposer"],["Revenir en position d'attente"]];
+function mark(k){[...$("steps").children].forEach((li,i)=>li.className=i<k?"done":i===k?"now":"")}
+async function readDistance(){                  // moyenne de 5 mesures stables
+  let v=[];for(let n=0;n<5;n++){await wait(120);if(sensors.pres&&sensors.d>0)v.push(sensors.d)}
+  return v.length>=3?v.reduce((a,b)=>a+b)/v.length:0;
+}
+async function cycle(pick,drop){
+  const reach=d=>Math.min(1,Math.max(0,(d-D_NEAR)/(D_FAR-D_NEAR)));
+  const pose=r=>({1:lerp(75,125,r),2:lerp(70,115,r),3:90});     // épaule, coude, poignet selon portée
+  const HIGH={1:70,2:70,3:90}, DROP_R=pose(.5);
+  mark(0);setMsg("Recherche d'un objet au poste de prise…");
+  await moveTo({0:POSTES[pick],...HIGH,5:GRIP_OPEN},900);
+  let d=0,t0=Date.now();
+  while(!d){ if(Date.now()-t0>30000)throw new Error("Aucun objet détecté en 30 s au poste "+(pick+1)+".");
+    if(sensors.pres)d=await readDistance(); else await wait(150) }
+  mark(1);setMsg("Objet à "+Math.round(d)+" mm. Orientation vers le poste "+(pick+1)+".");
+  await moveTo({0:POSTES[pick]},500);
+  mark(2);setMsg("Approche de la pince.");
+  await moveTo(pose(reach(d)),1100);
+  mark(3);setMsg("Saisie.");
+  await moveTo({5:GRIP_CLOSED},600);await wait(300);
+  if(!online)sim.pres=false;
+  mark(4);setMsg("Levage.");
+  await moveTo(HIGH,900);
+  mark(5);setMsg("Transfert vers le poste "+(drop+1)+".");
+  await moveTo({0:POSTES[drop]},1300);
+  mark(6);setMsg("Dépose.");
+  await moveTo(DROP_R,900);await moveTo({5:GRIP_OPEN},500);
+  mark(7);setMsg("Retour en position d'attente.");
+  await moveTo({0:90,1:90,2:90,3:90,4:90},1000);
+  mark(8);
+  if(!online){await wait(800);sim.pres=true;$("simPres").checked=true}
+}
+async function runAuto(){
+  if(running||estop)return;
+  const pick=+$("selPick").value,drop=+$("selDrop").value,n=+$("nCyc").value||1;
+  if(pick===drop)return setMsg("Choisissez deux postes différents pour la prise et la dépose.",true);
+  running=true;abort=false;$("go").disabled=true;
+  try{ for(let c=1;c<=n;c++){ $("go").textContent="Cycle "+c+" sur "+n; await cycle(pick,drop) } setMsg("Terminé : "+n+" colis déplacé"+(n>1?"s":"")+".") }
+  catch(e){ setMsg(e.message==="stop"?"Cycle interrompu.":e.message,e.message!=="stop") }
+  running=false;$("go").disabled=false;$("go").textContent="Lancer le cycle";
+}
+
+// ---- Événements ----
+$("btnConn").onclick=()=>online?ws.close():connect();
+$("home").onclick=async()=>{if(estop||running)return;await moveTo(Object.fromEntries(SERVOS.map((s,i)=>[i,s.home])),900).catch(()=>{})};
+$("gOpen").onclick=()=>{if(!estop&&mode==="man")setServo(5,GRIP_OPEN)};
+$("gClose").onclick=()=>{if(!estop&&mode==="man")setServo(5,GRIP_CLOSED)};
+$("mMan").onclick=()=>setMode("man");$("mAuto").onclick=()=>setMode("auto");
+function setMode(m){ if(running)return; mode=m;
+  $("mMan").classList.toggle("on",m==="man");$("mAuto").classList.toggle("on",m==="auto");
+  $("autoPane").classList.toggle("hide",m!=="auto");
+  SERVOS.forEach((_,i)=>$("r"+i).disabled=m==="auto");
+  setMsg(m==="auto"?"Mode automatique : choisissez les postes puis lancez le cycle.":"Mode manuel : déplacez les curseurs.");markPosts();mark(-1)}
+$("go").onclick=runAuto;
+$("halt").onclick=()=>{abort=true};
+$("selPick").onchange=$("selDrop").onchange=markPosts;
+$("estop").onclick=()=>{
+  estop=!estop;abort=true;$("estop").classList.toggle("armed",estop);
+  $("estop").textContent=estop?"REARMER":"ARRÊT D'URGENCE";
+  send({t:estop?"stop":"go"});
+  setMsg(estop?"Arrêt d'urgence actif : le bras est gelé. Appuyez sur Réarmer pour reprendre.":"Système réarmé.",estop);
+};
+$("simPres").onchange=e=>{sim.pres=e.target.checked};
+$("simDist").oninput=e=>{$("simDistV").textContent=e.target.value+" mm"};
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!estop)$("estop").click()});
+
+build();try{$("ip").value=localStorage.getItem("rl1ip")||$("ip").value}catch(e){}
+setState("Hors ligne · mode démo","demo");setInterval(render,250);render();
+</script>
+</body>
+</html>
